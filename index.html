@@ -44,7 +44,7 @@
     .dots { display:flex; gap:.35rem; flex-wrap:wrap; justify-content:center; }
     .dot { width:8px; height:8px; border-radius:50%; padding:0; border:none; background:rgba(243,229,171,.3); }
     .dot.active { background:var(--gold); transform:scale(1.3); }
-    #loading { position:absolute; inset:0; display:grid; place-items:center; font-family:'Cinzel',serif; color:var(--gold); }
+    #loading { position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:1rem; font-family:'Cinzel',serif; color:var(--gold); }
   </style>
 </head>
 <body>
@@ -71,47 +71,46 @@
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
     const titles = ["Cover","Pork","Chicken","Beef & Seafood","Rice Bowl","A La Carte","All-Time Snack","Pasta & Salad","Dessert & Hot Drinks","Drinks & Wine"];
-    const book = document.getElementById("book"), dotsEl = document.getElementById("dots"), label = document.getElementById("label");
+    const book = document.getElementById("book"), dotsEl = document.getElementById("dots"), label = document.getElementById("label"), loadingEl = document.getElementById("loading");
     let idx = 0, total = 0, sheets = [], dots = [];
 
-    pdfjsLib.getDocument('1000099638.pdf').promise.then(async pdf => {
-      document.getElementById("loading").style.display = "none";
+    pdfjsLib.getDocument('./1000099638.pdf').promise.then(async pdf => {
       total = pdf.numPages;
 
-      for (let i = 1; i <= total; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.8 });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-
+      // Create all 10 3D sheets immediately
+      for (let i = 0; i < total; i++) {
         const sheet = document.createElement("div");
         sheet.className = "sheet";
-        sheet.style.zIndex = total - (i - 1);
-
-        const front = document.createElement("div");
-        front.className = "face";
-        front.appendChild(canvas);
-
-        const back = document.createElement("div");
-        back.className = "face back";
-        back.textContent = "✦ KOI GARDEN CAFE ✦";
-
-        sheet.appendChild(front);
-        sheet.appendChild(back);
-        const pageIndex = i - 1;
-        sheet.onclick = () => pageIndex === idx && idx < total - 1 ? go(idx + 1) : pageIndex < idx && go(pageIndex);
+        sheet.style.zIndex = total - i;
+        sheet.innerHTML = `<div class="face" id="face-${i}"></div><div class="face back">✦ KOI GARDEN CAFE ✦</div>`;
+        sheet.onclick = () => i === idx && idx < total - 1 ? go(idx + 1) : i < idx && go(i);
         book.appendChild(sheet);
         sheets.push(sheet);
 
         const d = document.createElement("button");
         d.className = "dot";
-        d.onclick = () => go(pageIndex);
+        d.onclick = () => go(i);
         dotsEl.appendChild(d);
         dots.push(d);
       }
-      go(0);
+
+      // Render pages one by one so the cover shows up right away
+      for (let i = 1; i <= total; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.35 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        document.getElementById(`face-${i - 1}`).appendChild(canvas);
+
+        if (i === 1) {
+          loadingEl.style.display = "none";
+          go(0);
+        }
+      }
+    }).catch(err => {
+      loadingEl.textContent = "Could not load PDF: " + err.message;
     });
 
     function go(n) {
