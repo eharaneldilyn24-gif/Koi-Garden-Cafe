@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KOI Garden Cafe | 3D Digital Menu</title>
+  <link href="https://googleapis.com" rel="stylesheet">
+  <script src="https://cloudflare.com"></script>
+  <style>
+    :root { --bg:#1a0608; --crimson:#3b0d11; --gold:#d4af37; --cream:#f4eab8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+      padding:1rem; background:radial-gradient(circle, var(--crimson), var(--bg));
+      color:#f3e5ab; font-family:'Plus Jakarta Sans',sans-serif; overflow-x:hidden; user-select:none;
+    }
+    header { text-align:center; }
+    .sub { font-size:.68rem; letter-spacing:.22em; color:var(--gold); text-transform:uppercase; }
+    h1 { font-family:'Cinzel',serif; font-size:1.45rem; letter-spacing:.08em; }
+    .stage { width:min(92vw, 410px); aspect-ratio:9/14.5; perspective:1700px; margin:.6rem auto; position:relative; }
+    .book { width:100%; height:100%; position:relative; transform-style:preserve-3d; }
+    .sheet {
+      position:absolute; inset:0; transform-origin:left center; transform-style:preserve-3d;
+      transition:transform .8s cubic-bezier(.65,.05,.36,1); cursor:pointer; border-radius:4px 14px 14px 4px;
+      box-shadow:0 20px 45px rgba(0,0,0,.7);
+    }
+    .face {
+      position:absolute; inset:0; backface-visibility:hidden; border-radius:4px 14px 14px 4px;
+      overflow:hidden; background:var(--cream); border:1px solid rgba(212,175,55,.4);
+    }
+    .face canvas { width:100%; height:100%; object-fit:cover; display:block; }
+    .face.back {
+      transform:rotateY(180deg); background:linear-gradient(135deg,#2b090c,#4a1217);
+      color:var(--gold); display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif;
+    }
+    .sheet.flipped { transform:rotateY(-165deg); }
+    .controls { display:flex; flex-direction:column; align-items:center; gap:.5rem; width:100%; }
+    .nav { display:flex; gap:.6rem; align-items:center; }
+    button {
+      background:rgba(212,175,55,.18); border:1px solid var(--gold); color:#f3e5ab;
+      padding:.45rem .9rem; border-radius:99px; font-size:.8rem; font-weight:600;
+    }
+    button:disabled { opacity:.35; }
+    .dots { display:flex; gap:.35rem; flex-wrap:wrap; justify-content:center; }
+    .dot { width:8px; height:8px; border-radius:50%; padding:0; border:none; background:rgba(243,229,171,.3); }
+    .dot.active { background:var(--gold); transform:scale(1.3); }
+    #loading { position:absolute; inset:0; display:grid; place-items:center; font-family:'Cinzel',serif; color:var(--gold); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sub">Serene Dining &amp; Tea House</div>
+    <h1>KOI GARDEN CAFE</h1>
+  </header>
+
+  <main class="stage" id="stage">
+    <div id="loading">Opening Menu...</div>
+    <div class="book" id="book"></div>
+  </main>
+
+  <footer class="controls">
+    <div class="nav">
+      <button id="prevBtn" disabled>← Prev</button>
+      <span id="label" style="font-size:.8rem;color:var(--gold);font-weight:700;">Loading...</span>
+      <button id="nextBtn" disabled>Next →</button>
+    </div>
+    <div class="dots" id="dots"></div>
+    <div style="font-size:.7rem;opacity:.75;">Swipe left/right or tap Next · Prices in ₱</div>
+  </footer>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
+    const titles = ["Cover","Pork","Chicken","Beef & Seafood","Rice Bowl","A La Carte","All-Time Snack","Pasta & Salad","Dessert & Hot Drinks","Drinks & Wine"];
+    const book = document.getElementById("book"), dotsEl = document.getElementById("dots"), label = document.getElementById("label");
+    let idx = 0, total = 0, sheets = [], dots = [];
+
+    pdfjsLib.getDocument('menu.pdf').promise.then(async pdf => {
+      document.getElementById("loading").style.display = "none";
+      total = pdf.numPages;
+
+      for (let i = 1; i <= total; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.8 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+        const sheet = document.createElement("div");
+        sheet.className = "sheet";
+        sheet.style.zIndex = total - (i - 1);
+
+        const front = document.createElement("div");
+        front.className = "face";
+        front.appendChild(canvas);
+
+        const back = document.createElement("div");
+        back.className = "face back";
+        back.textContent = "✦ KOI GARDEN CAFE ✦";
+
+        sheet.appendChild(front);
+        sheet.appendChild(back);
+        const pageIndex = i - 1;
+        sheet.onclick = () => pageIndex === idx && idx < total - 1 ? go(idx + 1) : pageIndex < idx && go(pageIndex);
+        book.appendChild(sheet);
+        sheets.push(sheet);
+
+        const d = document.createElement("button");
+        d.className = "dot";
+        d.onclick = () => go(pageIndex);
+        dotsEl.appendChild(d);
+        dots.push(d);
+      }
+      go(0);
+    });
+
+    function go(n) {
+      idx = Math.max(0, Math.min(total - 1, n));
+      sheets.forEach((s, i) => {
+        s.classList.toggle("flipped", i < idx);
+        s.style.zIndex = i < idx ? i + 1 : total - i;
+      });
+      dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+      label.textContent = `${titles[idx] || 'Page ' + (idx + 1)} · ${idx + 1}/${total}`;
+      prevBtn.disabled = idx === 0;
+      nextBtn.disabled = idx === total - 1;
+    }
+
+    prevBtn.onclick = () => go(idx - 1);
+    nextBtn.onclick = () => go(idx + 1);
+
+    let startX = 0;
+    document.getElementById("stage").addEventListener("touchstart", e => startX = e.changedTouches.screenX, {passive:true});
+    document.getElementById("stage").addEventListener("touchend", e => {
+      const diff = e.changedTouches.screenX - startX;
+      if (Math.abs(diff) > 40) diff < 0 ? go(idx + 1) : go(idx - 1);
+    }, {passive:true});
+  </script>
+</body>
+</html>
