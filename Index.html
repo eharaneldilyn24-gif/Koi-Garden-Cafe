@@ -74,7 +74,7 @@
     const book = document.getElementById("book"), dotsEl = document.getElementById("dots"), label = document.getElementById("label");
     let idx = 0, total = 0, sheets = [], dots = [];
 
-    pdfjsLib.getDocument('menu.pdf').promise.then(async pdf => {
+    pdfjsLib.getDocument('1000099638.pdf').promise.then(async pdf => {
       document.getElementById("loading").style.display = "none";
       total = pdf.numPages;
 
