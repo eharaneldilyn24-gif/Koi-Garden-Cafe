@@ -3,144 +3,492 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KOI Garden Cafe | 3D Digital Menu</title>
-  <link href="https://googleapis.com" rel="stylesheet">
-  <script src="https://unpkg.com"></script>
+  <title>KOI Garden Cafe | Interactive 3D Menu</title>
   <style>
-    :root { --bg:#1a0608; --crimson:#3b0d11; --gold:#d4af37; --cream:#f4eab8; }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body {
-      min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-      padding:1rem; background:radial-gradient(circle, var(--crimson), var(--bg));
-      color:#f3e5ab; font-family:'Plus Jakarta Sans',sans-serif; overflow-x:hidden; user-select:none;
+    :root {
+      --bg: #1f0609;
+      --crimson: #590d16;
+      --gold: #d4af37;
+      --gold-bright: #f3dc8b;
+      --cream: #faf3dc;
+      --card: #fffdf5;
+      --ink: #2a1215;
     }
-    header { text-align:center; }
-    .sub { font-size:.68rem; letter-spacing:.22em; color:var(--gold); text-transform:uppercase; }
-    h1 { font-family:'Cinzel',serif; font-size:1.45rem; letter-spacing:.08em; }
-    .stage { width:min(92vw, 410px); aspect-ratio:9/14.5; perspective:1700px; margin:.6rem auto; position:relative; }
-    .book { width:100%; height:100%; position:relative; transform-style:preserve-3d; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0.65rem;
+      background: radial-gradient(circle at top, var(--crimson), var(--bg));
+      color: var(--gold-bright);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+    header { text-align: center; }
+    .sub { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; }
+    h1 { font-family: Georgia, serif; font-size: 1.35rem; letter-spacing: 0.08em; margin-top: 0.1rem; }
+
+    /* Category Quick-Jump Bar */
+    .tabs {
+      display: flex;
+      gap: 0.35rem;
+      overflow-x: auto;
+      max-width: 100%;
+      padding: 0.35rem 0.2rem;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      color: var(--gold-bright);
+      padding: 0.32rem 0.7rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .tab.active { background: var(--gold); color: #1f0609; }
+
+    /* 3D Flipbook Stage */
+    .stage {
+      width: min(94vw, 410px);
+      height: 520px;
+      perspective: 1500px;
+      position: relative;
+      margin: 0.35rem auto;
+    }
+    .book {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+    }
     .sheet {
-      position:absolute; inset:0; transform-origin:left center; transform-style:preserve-3d;
-      transition:transform .8s cubic-bezier(.65,.05,.36,1); cursor:pointer; border-radius:4px 14px 14px 4px;
-      box-shadow:0 20px 45px rgba(0,0,0,.7);
+      position: absolute;
+      inset: 0;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.65, 0.05, 0.36, 1);
+      border-radius: 4px 14px 14px 4px;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.65);
     }
     .face {
-      position:absolute; inset:0; backface-visibility:hidden; border-radius:4px 14px 14px 4px;
-      overflow:hidden; background:var(--cream); border:1px solid rgba(212,175,55,.4);
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: 4px 14px 14px 4px;
+      background: var(--cream);
+      color: var(--ink);
+      padding: 1rem 0.95rem;
+      overflow-y: auto;
+      border: 2px solid var(--gold);
     }
-    .face canvas { width:100%; height:100%; object-fit:cover; display:block; }
+    .face.cover {
+      background: radial-gradient(circle at center, #6b111c 0%, #2b060a 100%);
+      color: var(--gold-bright);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.5rem;
+    }
     .face.back {
-      transform:rotateY(180deg); background:linear-gradient(135deg,#2b090c,#4a1217);
-      color:var(--gold); display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif;
+      transform: rotateY(180deg);
+      background: linear-gradient(135deg, #2b090c, #4a1217);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, serif;
+      font-size: 1.1rem;
     }
-    .sheet.flipped { transform:rotateY(-165deg); }
-    .controls { display:flex; flex-direction:column; align-items:center; gap:.5rem; width:100%; }
-    .nav { display:flex; gap:.6rem; align-items:center; }
-    button {
-      background:rgba(212,175,55,.18); border:1px solid var(--gold); color:#f3e5ab;
-      padding:.45rem .9rem; border-radius:99px; font-size:.8rem; font-weight:600;
+    .sheet.flipped { transform: rotateY(-165deg); }
+
+    /* Cover Design */
+    .koi-emblem {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      background: radial-gradient(circle, #184e59 0%, #0d2c33 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin: 0.9rem 0;
+      box-shadow: 0 0 25px rgba(212, 175, 55, 0.35);
     }
-    button:disabled { opacity:.35; }
-    .dots { display:flex; gap:.35rem; flex-wrap:wrap; justify-content:center; }
-    .dot { width:8px; height:8px; border-radius:50%; padding:0; border:none; background:rgba(243,229,171,.3); }
-    .dot.active { background:var(--gold); transform:scale(1.3); }
-    #loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6rem; text-align:center; padding:1rem; font-family:'Cinzel',serif; color:var(--gold); }
+    .cover-box {
+      border-top: 1.5px solid var(--gold);
+      border-bottom: 1.5px solid var(--gold);
+      padding: 0.45rem 1.4rem;
+      font-family: Georgia, serif;
+      letter-spacing: 0.18em;
+      font-size: 0.95rem;
+      margin: 0.6rem 0;
+    }
+
+    /* Menu Page Styling */
+    .page-header {
+      text-align: center;
+      border-bottom: 2px solid var(--gold);
+      padding-bottom: 0.4rem;
+      margin-bottom: 0.65rem;
+    }
+    .page-header small {
+      display: block;
+      font-size: 0.62rem;
+      letter-spacing: 0.18em;
+      color: #8c5e08;
+      text-transform: uppercase;
+    }
+    .page-header h2 {
+      font-family: Georgia, serif;
+      font-size: 1.25rem;
+      color: #6e0f1a;
+      letter-spacing: 0.06em;
+    }
+    .section-tag {
+      background: #6e0f1a;
+      color: var(--gold-bright);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 0.22rem 0.6rem;
+      border-radius: 4px;
+      margin: 0.55rem 0 0.45rem;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+    .item {
+      background: var(--card);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: #590d16;
+    }
+    .price {
+      color: #9e6b05;
+      font-weight: 800;
+      white-space: nowrap;
+      font-size: 0.88rem;
+    }
+    .desc {
+      font-size: 0.73rem;
+      color: #4f3a3c;
+      margin-top: 0.18rem;
+      line-height: 1.32;
+    }
+    .compact-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0.2rem;
+      border-bottom: 1px dashed rgba(110, 15, 26, 0.22);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #3d161a;
+    }
+
+    /* Bottom Navigation */
+    .controls { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; width: 100%; }
+    .nav { display: flex; gap: 0.7rem; align-items: center; }
+    .nav button {
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid var(--gold);
+      color: var(--gold-bright);
+      padding: 0.45rem 1rem;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .nav button:disabled { opacity: 0.35; cursor: default; }
   </style>
 </head>
 <body>
+
   <header>
     <div class="sub">Serene Dining &amp; Tea House</div>
-    <h1>KOI GARDEN CAFE</h1>
+    <h1>KOI GARDEN CAFÈ</h1>
   </header>
 
+  <div class="tabs" id="tabs"></div>
+
   <main class="stage" id="stage">
-    <div id="loading"><div>Downloading Menu PDF...</div><div id="status" style="font-size:.75rem;font-family:sans-serif;opacity:.8;">Please wait a moment</div></div>
     <div class="book" id="book"></div>
   </main>
 
   <footer class="controls">
     <div class="nav">
-      <button id="prevBtn" disabled>← Prev</button>
-      <span id="label" style="font-size:.8rem;color:var(--gold);font-weight:700;">Loading...</span>
-      <button id="nextBtn" disabled>Next →</button>
+      <button id="prevBtn">← Prev</button>
+      <span id="label" style="font-size:0.8rem;color:var(--gold);font-weight:700;">Cover · 1/10</span>
+      <button id="nextBtn">Next →</button>
     </div>
-    <div class="dots" id="dots"></div>
-    <div style="font-size:.7rem;opacity:.75;">Swipe left/right or tap Next · Prices in ₱</div>
+    <div style="font-size:0.68rem;opacity:0.8;">Swipe left/right or tap category tabs · Prices in ₱</div>
   </footer>
 
   <script>
-    const statusEl = document.getElementById("status");
-    const loadingEl = document.getElementById("loading");
-    const titles = ["Cover","Pork","Chicken","Beef & Seafood","Rice Bowl","A La Carte","All-Time Snack","Pasta & Salad","Dessert & Hot Drinks","Drinks & Wine"];
-    const book = document.getElementById("book"), dotsEl = document.getElementById("dots"), label = document.getElementById("label");
-    let idx = 0, total = 0, sheets = [], dots = [];
-
-    if (typeof pdfjsLib === 'undefined') {
-      statusEl.textContent = "PDF engine blocked by network. Refresh page.";
-    } else {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com';
-      const pdfUrl = 'https://githubusercontent.com';
-
-      pdfjsLib.getDocument(pdfUrl).promise.then(async pdf => {
-        total = pdf.numPages;
-        statusEl.textContent = `Rendering 1 of ${total} pages...`;
-
-        for (let i = 0; i < total; i++) {
-          const sheet = document.createElement("div");
-          sheet.className = "sheet";
-          sheet.style.zIndex = total - i;
-          sheet.innerHTML = `<div class="face" id="face-${i}"></div><div class="face back">✦ KOI GARDEN CAFE ✦</div>`;
-          sheet.onclick = () => i === idx && idx < total - 1 ? go(idx + 1) : i < idx && go(i);
-          book.appendChild(sheet);
-          sheets.push(sheet);
-
-          const d = document.createElement("button");
-          d.className = "dot";
-          d.onclick = () => go(i);
-          dotsEl.appendChild(d);
-          dots.push(d);
-        }
-
-        for (let i = 1; i <= total; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.2 });
-          const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-          document.getElementById(`face-${i - 1}`).appendChild(canvas);
-
-          if (i === 1) {
-            loadingEl.style.display = "none";
-            go(0);
+    const pages = [
+      { title: "Cover", isCover: true },
+      {
+        title: "Pork",
+        sections: [{
+          name: "Pork Specialties",
+          items: [
+            { n: "Indonesian Style Pork Satay", p: "₱250", d: "Smoked pork skewers in peanut sauce served with salad and plain rice." },
+            { n: "Pork Afritada", p: "₱290", d: "Chef's special pork casserole in tomato sauce and vegetables served with salad and plain rice." },
+            { n: "Spiced Pork Baby Back Ribs", p: "₱370", d: "Tender, fall-off-bone pork ribs with special spices in our house gravy served with salad and plain rice." },
+            { n: "Sweet and Sour Pork", p: "₱280", d: "Battered deep-fried pork tossed in a tangy-sweet sauce with bell pepper and pineapple chunks, salad and plain rice." }
+          ]
+        }]
+      },
+      {
+        title: "Chicken",
+        sections: [{
+          name: "Chicken Specialties",
+          items: [
+            { n: "Indonesian Style Chicken Satay", p: "₱250", d: "Smoked chicken skewers in peanut sauce served with salad and plain rice." },
+            { n: "Chicken Cacciatore", p: "₱280", d: "Italian chicken stew in vegetables served with salad and plain rice." },
+            { n: "Chicken Green-Curry", p: "₱280", d: "Classic aromatic green curry served with salad and plain rice." },
+            { n: "Chicken Sotanghon Guisado", p: "₱260", d: "Stir-fried glass noodles with chicken strips and vegetables served with salad and plain rice." }
+          ]
+        }]
+      },
+      {
+        title: "Beef & Seafood",
+        sections: [
+          {
+            name: "Beef",
+            items: [
+              { n: "Indonesian Beef Curry", p: "₱300", d: "Slow-cooked minced beef curry in aromatic spices served with salad and plain rice." },
+              { n: "Indonesian Beef Rendang", p: "₱350", d: "Slow-cooked dry curry from Indonesia made with tender beef, aromatic spices, and coconut milk with salad and rice." }
+            ]
+          },
+          {
+            name: "Seafood",
+            items: [
+              { n: "Spiced / Garlic Prawns", p: "₱280", d: "Juicy prawns cooked with butter in a sweet, spicy, garlicky sauce served with salad and plain rice." },
+              { n: "Grilled Tanguige Fish", p: "₱280", d: "Grilled lemon herb fish fillet in sweet lemon flavor sauce served with salad and plain rice." }
+            ]
           }
-        }
-      }).catch(err => {
-        statusEl.textContent = "Error: " + err.message;
-      });
-    }
+        ]
+      },
+      {
+        title: "Rice Bowl",
+        sections: [{
+          name: "Rice Bowls",
+          items: [
+            { n: "Pork Humba", p: "₱190", d: "Sweet and savory Filipino braised pork dish served in rice bowl with boiled egg topping." },
+            { n: "Pork Sisig", p: "₱220", d: "Classic Filipino dish with a smoky, tangy, and savory flavor served with egg and plain rice." },
+            { n: "Chicken Schnitzel", p: "₱240", d: "Classic and crispy thin chicken cutlets coated in seasoned flour and egg, pan-fried to golden perfection." },
+            { n: "Chicken Nuggets", p: "₱160", d: "Kiddie meal with 4 pcs. chicken nuggets served with egg and plain rice." }
+          ]
+        }]
+      },
+      {
+        title: "A La Carte",
+        sections: [
+          {
+Use code with caution.
+name: "A La Carte Menu",
+compact: [
+["Sotanghon Guisado", "₱300"],
+["Bam-e", "₱300"],
+["Chopsuèy", "₱340"],
+["Bucket Chicken", "₱350"],
+["Sweet & Sour Pork", "₱390"],
+["Chicken Cacciatore", "₱400"],
+["Pork Afritada", "₱400"],
+["Garlic Prawns", "₱550"],
+["Baby Back Ribs", "₱590"]
+]
+},
+{
+name: "Rice Platter & Soup",
+compact: [
+["Steamed Rice Platter", "₱120"],
+["Nasi Goreng Platter", "₱270"],
+["Sotanghon Soup", "₱280"],
+["Fish Tinola", "₱300"],
+["1 Cup Rice (Extra)", "₱30"]
+]
+}
+]
+},
+{
+title: "Snacks",
+sections: [
+{
+name: "All-Time Snack",
+items: [
+{ n: "Hamburger", p: "₱240", d: "Quarter-pounder burger with pure meat beef patty." },
+{ n: "BELT", p: "₱220", d: "Bacon, Egg, Lettuce, and Tomato in toast." },
+{ n: "Sloppy Joe", p: "₱295", d: "Ground beef cooked in semi-sweet tomato-based sauce topped with melted cheese on toast." },
+{ n: "Ultimate Shrimp Toast", p: "₱280", d: "Shrimp cooked in cream-based sauce with a bit of black pepper powder on toast." }
+]
+},
+{
+name: "Add-On Potato Fries",
+compact: [
+["Potato Fries (Half)", "₱65"],
+["Potato Fries (Regular)", "₱120"]
+]
+}
+]
+},
+{
+title: "Pasta & Salad",
+sections: [
+{
+name: "Pasta",
+items: [
+{ n: "Spaghetti Bolognese", p: "₱290", d: "Italian-style spaghetti with pure ground beef braised in aromatic tomato sauce with onions, garlic, carrots and celery." },
+{ n: "Carbonara", p: "₱280", d: "A thick, creamy pasta loaded with crispy bacon, parmesan cheese and parsley." }
+]
+},
+{
+name: "Salad",
+items: [
+{ n: "Nicoise Salad", p: "₱280", d: "Meal-size green salad with flakes of tuna and egg in Italian dressing." },
+{ n: "Vietnamese Salad", p: "₱260", d: "Green salad in semi-sweet and a hint of sour flavor salad dressing." }
+]
+}
+]
+},
+{
+title: "Dessert & Hot",
+sections: [
+{
+name: "Dessert",
+items: [
+{ n: "Clive's Special Mango Float", p: "₱150", d: "6 slices in one serving." },
+{ n: "Surprise Biko", p: "₱120", d: "Served warm with vanilla ice cream on top." },
+{ n: "Suman (Banana Leaves Wrap)", p: "₱120", d: "Served warm with vanilla ice cream or fresh ripe mango." },
+{ n: "Mango Crepe", p: "₱150", d: "Served warm with real chunk mangoes and la crèmā." }
+]
+},
+{
+name: "Hot Drinks",
+compact: [
+["Local Coffee (Binokbok)", "₱60"],
+["Tsokolatè (Tablea)", "₱80"],
+["Coffee in Plunger", "₱120"]
+]
+}
+]
+},
+{
+title: "Drinks & Wine",
+sections: [
+{
+name: "Wine (Hardys VR & Carlo Rossi)",
+compact: [
+["Hardys VR Merlot / Shiraz / Moscato / Chardonnay", "Bottle ₱800 · Glass ₱200"],
+["Carlo Rossi Red / White Moscato", "Bottle ₱700 · Glass ₱150"]
+]
+},
+{
+name: "Alcohol & Beer",
+compact: [
+["San Mig Light / X-Light / Pilsen / Cerveza Negra", "₱70"],
+["Flavored Beer Apple / Lychee", "₱70"],
+["Red Horse 500ml / 1000ml", "₱80 / ₱160"]
+]
+},
+{
+name: "Soda Cans & Refreshments",
+compact: [
+["Coke Orig / Zero, Sprite, Royal, Mtn Dew, Pepsi (320ml)", "₱70"],
+["4 Seasons / Pineapple Juice Can", "₱70"],
+["Fresh Seasonal Fruits / Special Iced Coffee", "₱150"],
+["Juice Pitchers (4 Seasons / Pineapple / Mango)", "₱180"],
+["Soda Water 800ml / Bottled Water 290ml", "₱80 / ₱25"]
+]
+}
+]
+}
+];
+const book = document.getElementById("book");
+const tabsEl = document.getElementById("tabs");
+const label = document.getElementById("label");
+let idx = 0;
+pages.forEach((p, i) => {
+const sheet = document.createElement("div");
+sheet.className = "sheet";
+sheet.style.zIndex = pages.length - i;
+let frontHTML = "";
+if (p.isCover) {
+frontHTML =  <div class="face cover"> <div style="color:var(--gold);letter-spacing:0.22em;font-size:0.7rem;font-weight:700;">SERENE DINING &amp; TEA HOUSE</div> <h2 style="font-family:Georgia,serif;font-size:2.3rem;color:var(--gold);margin:0.4rem 0;line-height:1.1;">KOI<br><span style="font-size:1.5rem;color:var(--gold-bright);">Garden Cafe</span></h2> <div class="koi-emblem">🎏🪷🎏</div> <div class="cover-box">MENU · EST. 2020</div> <p style="font-size:0.78rem;margin-top:0.8rem;opacity:0.9;line-height:1.4;">Rizal Street, Clarin,<br>Misamis Occidental</p> <p style="font-size:0.7rem;margin-top:1rem;color:var(--gold);">Swipe left or tap Next →</p> </div>;
+} else {
+const bodyHTML = p.sections.map(sec => {
+let html = <div class="section-tag">${sec.name}</div>;
+if (sec.items) {
+html += sec.items.map(it =>  <div class="item"> <div class="row"><span>${it.n}</span><span class="price">${it.p}</span></div> <div class="desc">${it.d}</div> </div>).join("");
+}
+if (sec.compact) {
+html += sec.compact.map(row =>  <div class="compact-row"><span>${row}</span><span class="price">${row}</span></div>).join("");
+}
+return html;
+}).join("");
+frontHTML =  <div class="face"> <div class="page-header"> <small>KOI GARDEN CAFÈ · FOOD MENU</small> <h2>${p.title.toUpperCase()}</h2> </div> ${bodyHTML} </div>;
+}
+sheet.innerHTML = frontHTML + <div class="face back">✦ KOI GARDEN CAFÈ ✦</div>;
+book.appendChild(sheet);
+const tab = document.createElement("button");
+tab.className = "tab";
+tab.textContent = p.title;
+tab.onclick = () => go(i);
+tabsEl.appendChild(tab);
+});
+const sheets = document.querySelectorAll(".sheet");
+const tabs = document.querySelectorAll(".tab");
+function go(n) {
+idx = Math.max(0, Math.min(pages.length - 1, n));
+sheets.forEach((s, i) => {
+s.classList.toggle("flipped", i < idx);
+s.style.zIndex = i < idx ? i + 1 : pages.length - i;
+});
+tabs.forEach((t, i) => {
+t.classList.toggle("active", i === idx);
+if (i === idx) t.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+});
+label.textContent = ${pages[idx].title} · ${idx + 1}/${pages.length};
+prevBtn.disabled = idx === 0;
+nextBtn.disabled = idx === pages.length - 1;
+}
+prevBtn.onclick = () => go(idx - 1);
+nextBtn.onclick = () => go(idx + 1);
+let startX = 0;
+document.getElementById("stage").addEventListener("touchstart", e => startX = e.changedTouches.screenX, { passive: true });
+document.getElementById("stage").addEventListener("touchend", e => {
+const diff = e.changedTouches.screenX - startX;
+if (Math.abs(diff) > 35) diff < 0 ? go(idx + 1) : go(idx - 1);
+}, { passive: true });
+go(0);
 
-    function go(n) {
-      idx = Math.max(0, Math.min(total - 1, n));
-      sheets.forEach((s, i) => {
-        s.classList.toggle("flipped", i < idx);
-        s.style.zIndex = i < idx ? i + 1 : total - i;
-      });
-      dots.forEach((d, i) => d.classList.toggle("active", i === idx));
-      label.textContent = `${titles[idx] || 'Page ' + (idx + 1)} · ${idx + 1}/${total}`;
-      prevBtn.disabled = idx === 0;
-      nextBtn.disabled = idx === total - 1;
-    }
 
-    prevBtn.onclick = () => go(idx - 1);
-    nextBtn.onclick = () => go(idx + 1);
 
-    let startX = 0;
-    document.getElementById("stage").addEventListener("touchstart", e => startX = e.changedTouches.screenX, {passive:true});
-    document.getElementById("stage").addEventListener("touchend", e => {
-      const diff = e.changedTouches.screenX - startX;
-      if (Math.abs(diff) > 40) diff < 0 ? go(idx + 1) : go(idx - 1);
-    }, {passive:true});
-  </script>
-</body>
-</html>
+### What This Fixes Immediately
+* **Zero Loading:** All 10 pages of your PDF are hardcoded directly into the file, so it renders immediately without waiting for slow network downloads.
+* **Interactive Flipbook + Category Tabs:** Customers can swipe left/right, tap **Prev / Next**, or tap the top category buttons (**Pork**, **Chicken**, **Beef & Seafood**, **Rice Bowl**, **A La Carte**, **Snacks**, **Pasta & Salad**, **Dessert & Hot**, **Drinks & Wine**) to flip straight to any page.
+
+<FollowUp>
+Once you paste this code into **`index.html`** and commit it, open **`https://github.io`**—let me know if it opens right away so we can make your final **QR code**!
+</FollowUp>
